@@ -1,0 +1,91 @@
+https://www.youtube.com/watch?v=361bfIvXMBI&ab_channel=AareezAsif
+
+Jenkins
+1. sudo apt update -y
+2. sudo apt install openjdk-11-jre -y (install java)
+3. go to jenkins.io->Documentation->Installing Jenkins->Linux on LHS->copy whole command as mentiond below
+4. curl -fsSL https://pkg.jenkins.io/debian-stable/jenkins.io-2023.key | sudo tee \
+  /usr/share/keyrings/jenkins-keyring.asc > /dev/null
+echo deb [signed-by=/usr/share/keyrings/jenkins-keyring.asc] \
+  https://pkg.jenkins.io/debian-stable binary/ | sudo tee \
+  /etc/apt/sources.list.d/jenkins.list > /dev/null
+sudo apt-get update
+sudo apt-get install jenkins
+5. systemctl status jenkins
+6. click on New Item in jenkins page->Automated-pipeline in item name->select Freestyle project->ok->select Git under Source Code Management->copy the Repository URL (EX: Jenkins-Sonarque-Docker)->paste in Repository URL->Save->main under Branch Specifier->Select GitHub hook trigger for GITScm polling->save->go to gihub repo->select settings->Webhooks->Add webhook->Payload URL(http://Jenkins public IP:8080/github-webhook/)->Content type(default)->Click Let me select indivudual events.->Select Pushes and Pull requests->Add webhook->
+7. click on Build now
+Note: We can verify pipline is working or not(Ex: go to Jenkins-Sonarqube-Docker->click on Add file->create file->give file name->commit changes->right click on Automated pipeline->workspace)
+8. Go to Manage Jenkins->Manage Plugins->Available plugins->Select SonarQube Scanner->Select SSH2 Easy as well->Install without restart
+9. Go to Manage Jenkins->Global Tool Configuration->Click on Add SonarQube Scaner-> Name: SonarScanner(any name)->tick mark on Install automatically and Save
+10. Go to Configure System->Add SonarQube->Name: Sonar-server(any name)->Server URL(http://SonarQube IP:9000)->Save
+11. Go to pipeline(Automated-Pipeline)->Configure->Add build step(Select Execute SonarQube Scanner)->Analysis properties(sonarqube key ex:sonar.projectKey=Onix-Website-Scan)->Save
+12. Go to Manage Jenkins->Configure system->click Add on Server authentication token->Select Jenkins->Select Secret text in Kind->Secret(Paste the token which have copied in sonarqube)->Mention any ID(Sonar-Token)->Click on Add->Select Sonar-Token->Save
+13. Go to Pipeline->configure and check if anything to add and build the pipeline(click on Build Now) to verify it's working or not.
+ Once over code is passed in sonarqube server page we can deploy on docker server
+
+Install SonarQube
+1. sudo apt update -y
+2. sudo apt install openjdk-17-jre -y
+3. type sonarqube in browser-> click on download->click on Download for Free->pause->Right click download link in local machine->paste in ubuntu machine
+4. sudo apt install unzip -y
+5. type command "unzip sonarqube-9.9"
+6. ls->cd sonarqube-10.0.0
+7. ls->cd bin
+8. ls->cd linux-x86-64
+9. ls->sonar.sh
+10. ./sonar.sh
+11. ./sonar.sh console 
+12. type public ip:9000 once proess is up and sonarqube is operational
+13. Login: admin Password: admin
+14. update new password
+15. click on Manually in SonarQube->Project display name(Onix-Website-Scan)->Project key(Onix-Website-Scan)->Main branch name(main)->click on Set Up
+16. Click on With Jenkins in SonarQube page->Select github in DevOps plateform->Select Configure Analysis->Continue->Continue->Select Other->(Ex: for JS,TS..)Copy the Project key and Finish this tutorial
+17. Go to My Acccount on top right corner->Click on Security->
+18. Generate Tokens Name: SonarqubeToken Type: Global Analysis Token Expires in: any or 30->click on Generate Copy the token in notepad 
+Note: Global Analysis Token is used to scan for all type of Project in Sonarqube solution 
+
+Docker
+1. sudo hostnamectl set-hostname docker
+2. /bin/bash
+3. sudo apt update -y
+4. type docker install ubuntu in browser->Install Docker Engine on Ubuntu->Copy the 1,2 & 3 command under Set up the repository
+5. Copy the 1 & 2 command under Install Docker Engine
+6. sudo su 
+7. nano /etc/ssh/sshd_config
+8. uncomment PubkeyAuthentication yes  and PasswordAuthentication yes
+9. systemctl restart sshd
+10. first sudo su jenkins in jenkins server 
+11. passwd ubuntu 123 in docker server
+12. go to jenkins server type ssh ubuntu@docker private ip
+13. ssh-keygen and press enter key 4 times in jenkins server
+14. ssh-copy-id ssh ubuntu@docker private ip in jenkins server
+15. go to Jenkins page 
+16. Manage Jenkins->Configure System-> and here we can add the docker server 
+17. Click Add on under Server Groups Center below the Server Group List
+18. Group Name: Docker-Servers User Name: ubuntu password: 123 and save
+19. Manage Jenkins->Configure System-> click Add on under Server list:
+20. Server Group: Docker-servers Server Name: Docker-1 Server IP: Docker server public IP and save
+21. Now go back to pipeline Automated-pipeline->Configure->Add build step->Remote Shell->Shell: touch test.txt->save
+22. Click on Build Now to verify if it's working 
+Note: code will be scanned by sonarqube and once it's scanned it will run on remote command on remote server
+23. type ls on docker server and test.txt file should be there.
+24. Go to github click on create new file->Name your file: Dockerfile
+    1. FROM nginx
+    2. COPY . /usr/share/nginx/html/ 
+    Commit new file
+    It should trigger the pipeline automatically
+25. mkdir website-> cd website-> pwd /home/ubuntu/website (Login from ubuntu user not from root user)
+26. Go to Configure in Jenkins page->remove Remote Shell->Add build step(Execute shell)-> type command  scp -r ./* ubuntu@docker server public ip:~/website/->apply->save->Build Now
+27. type ls in docker server and Dockerfile should be there
+Now we build the image and run the container
+28. cd website->sudo usermod -aG docker ubuntu->newgrp docker->docker ps command shoudld work 
+29. Go back to Automated-pipeline->Configure->Add build step->Remote Shell
+type command under shell  cd /home/ubuntu/website
+                          docker build -t mywebsite .
+	                  docker run -d -p 8085:80 --name=Onix-Website mywebsite 
+    save->Build Now
+30. type docker ps to check container is working fine and Onix-Website should be there
+31. copy the docker server public ip:8085
+
+	      
+     	
